@@ -6,7 +6,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'FULDA - Federal University Directional Locator',
+  title: 'fuldir - Federal University Directional Locator',
   description: 'Navigate your campus with ease. Find any location and get step-by-step directions.',
 };
 

@@ -1,31 +1,87 @@
-// ==================== app/navigate/page.tsx (NAVIGATION APP) ====================
+// app/navigate/page.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, ArrowLeft, MapPin } from 'lucide-react';
+import { Search, ArrowLeft, MapPin, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { CAMPUSES, type CampusIdType } from '../lib/database';
 import type { Location } from '../lib/types';
 import { ThemeToggle } from '../_components/ThemeToggle';
+import { CampusSelector } from '../_components/CampusSelector';
 import { LocationCard } from '../_components/LocationCard';
-import { LOCATIONS, ROUTES } from '../lib/database';
-import { fuzzySearch, findRoute } from '../lib/searchUtils';
 import { DirectionsDisplay } from '../_components/ui/DirectionsDisplay';
 
 export default function NavigatePage() {
+  const [selectedCampus, setSelectedCampus] = useState<CampusIdType | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [destination, setDestination] = useState<Location | null>(null);
   const [startPoint, setStartPoint] = useState<Location | null>(null);
   const [showResults, setShowResults] = useState(false);
 
-  const searchResults = useMemo(() => 
-    fuzzySearch(searchQuery, LOCATIONS), 
-    [searchQuery]
-  );
+  // Get current campus data
+  const currentCampus = selectedCampus ? CAMPUSES[selectedCampus] : null;
+  const LOCATIONS = currentCampus?.locations || [];
+  const ROUTES = currentCampus?.routes || [];
 
+  // Fuzzy search implementation
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    
+    const query = searchQuery.toLowerCase();
+    const results = LOCATIONS
+      .map(location => {
+        // Calculate match score
+        let score = 0;
+        
+        // Exact name match gets highest score
+        if (location.name.toLowerCase() === query) score = 100;
+        // Name starts with query
+        else if (location.name.toLowerCase().startsWith(query)) score = 90;
+        // Name contains query
+        else if (location.name.toLowerCase().includes(query)) score = 70;
+        // Check aliases
+        else if (location.aliases.some(alias => alias.toLowerCase() === query)) score = 95;
+        else if (location.aliases.some(alias => alias.toLowerCase().startsWith(query))) score = 85;
+        else if (location.aliases.some(alias => alias.toLowerCase().includes(query))) score = 65;
+        // Check description
+        else if (location.description.toLowerCase().includes(query)) score = 50;
+        // Check category
+        else if (location.category.toLowerCase().includes(query)) score = 60;
+        
+        return { location, score };
+      })
+      .filter(result => result.score > 0)
+      .sort((a, b) => b.score - a.score);
+    
+    return results;
+  }, [searchQuery, LOCATIONS]);
+
+  // Find route between two points
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const findRouteFunc = (fromId: string, toId: string) => {
+    // Direct route
+    const directRoute = ROUTES.find(r => r.from === fromId && r.to === toId);
+    if (directRoute) return directRoute;
+    
+    // Reverse route
+    const reverseRoute = ROUTES.find(r => r.from === toId && r.to === fromId);
+    if (reverseRoute) {
+      return {
+        ...reverseRoute,
+        from: fromId,
+        to: toId,
+        directions: [...reverseRoute.directions].reverse()
+      };
+    }
+    
+    return null;
+  };
+
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const route = useMemo(() => {
     if (!startPoint || !destination) return null;
-    return findRoute(startPoint.id, destination.id, ROUTES);
-  }, [startPoint, destination]);
+    return findRouteFunc(startPoint.id, destination.id);
+  }, [startPoint, destination, findRouteFunc]);
 
   const handleLocationSelect = (location: Location): void => {
     setDestination(location);
@@ -33,7 +89,11 @@ export default function NavigatePage() {
     setShowResults(false);
     
     if (!startPoint) {
-      setStartPoint(LOCATIONS.find(l => l.id === 'main-gate') || null);
+      // Set default start point based on campus
+      const defaultStart = LOCATIONS.find(l => 
+        l.id === (selectedCampus === 'felele' ? 'felele-main-gate' : 'adankolo-main-gate')
+      );
+      setStartPoint(defaultStart || null);
     }
   };
 
@@ -48,9 +108,19 @@ export default function NavigatePage() {
     setDestination(null);
   };
 
-  const popularLocations = LOCATIONS.filter(l => 
-    ['library', 'cafeteria', 'admin-block', 'engineering-faculty', 'ict-center', 'lecture-theater-1'].includes(l.id)
-  );
+  const handleResetCampus = () => {
+    setSelectedCampus(null);
+    setSearchQuery('');
+    setDestination(null);
+    setStartPoint(null);
+  };
+
+  const popularLocations = LOCATIONS.slice(0, 6);
+
+  // If no campus selected, show campus selector
+  if (!selectedCampus) {
+    return <CampusSelector onSelectCampus={setSelectedCampus} />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,11 +133,28 @@ export default function NavigatePage() {
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <MapPin className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground">FULDA</span>
+              <span className="text-xl font-bold text-foreground">fuldir</span>
             </div>
           </Link>
           
-          <ThemeToggle />
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Campus Badge */}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg border border-primary/20">
+              <MapPin className="w-4 h-4" />
+              <span className="text-sm font-medium">{currentCampus?.name}</span>
+            </div>
+            
+            <ThemeToggle />
+            
+            <button
+              onClick={handleResetCampus}
+              className="flex items-center gap-2 px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors"
+              title="Change Campus"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">Change</span>
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -75,7 +162,9 @@ export default function NavigatePage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Campus Navigator</h1>
-          <p className="text-muted-foreground">Find your way around campus with ease</p>
+          <p className="text-muted-foreground">
+            Find your way around {currentCampus?.name.split('(')[0].trim()}
+          </p>
         </div>
 
         {/* Search Interface */}
@@ -117,7 +206,7 @@ export default function NavigatePage() {
             {showResults && searchQuery && searchResults.length === 0 && (
               <div className="mt-4 p-6 bg-card border border-border rounded-lg text-center">
                 <p className="text-muted-foreground">
-                  No locations found for "<span className="font-semibold text-foreground">{searchQuery}</span>"
+                  No locations found for &quote;<span className="font-semibold text-foreground">{searchQuery}</span>&quote;.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   Try searching for buildings, departments, or facilities
@@ -204,10 +293,10 @@ export default function NavigatePage() {
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-2">No Route Found</h3>
             <p className="text-muted-foreground mb-6">
-              Sorry, we couldn't find a direct route from <strong>{startPoint.name}</strong> to <strong>{destination.name}</strong>.
+              Sorry, we couldn&apos;t find a direct route from <strong>{startPoint.name}</strong> to <strong>{destination.name}</strong>.
             </p>
             <p className="text-sm text-muted-foreground mb-6">
-              Try asking for directions at the Student Affairs Office or contact campus security for assistance.
+              Try asking for directions at the information desk or contact campus security for assistance.
             </p>
             <button
               onClick={handleReset}
@@ -223,7 +312,7 @@ export default function NavigatePage() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="bg-muted/50 border border-border rounded-lg p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">Need help?</strong> Visit the Student Affairs Office or contact campus security at the main gate.
+            <strong className="text-foreground">Need help?</strong> Visit the information desk or contact campus security.
           </p>
         </div>
       </div>
