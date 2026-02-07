@@ -1,5 +1,4 @@
 // lib/types.ts
-
 export interface Location {
   id: string;
   name: string;
@@ -7,6 +6,7 @@ export interface Location {
   category: 'academic' | 'administrative' | 'facility' | 'residence' | 'gate';
   coordinates: { x: number; y: number };
   description: string;
+  image?: string; // Path to building image
 }
 
 export interface Route {
@@ -14,8 +14,12 @@ export interface Route {
   to: string;
   distance: number; // in meters
   duration: number; // in minutes
+  travelMode?: 'foot' | 'car'; // Mode of transportation
   directions: string[];
   landmarks: string[];
+  routeDiagram?: string; // Path to route diagram/map
+  destinationImage?: string; // Path to destination building image
+  visualCues?: string[]; // Visual landmarks to help identify the destination
 }
 
 export type CampusId = 'felele' | 'adankolo';

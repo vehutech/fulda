@@ -3,6 +3,7 @@
 
 import { MapPin, Building2, Heart } from 'lucide-react';
 import type { CampusId } from '../lib/types';
+import Image from 'next/image';
 
 interface CampusSelectorProps {
   onSelectCampus: (campusId: CampusId) => void;
@@ -11,14 +12,27 @@ interface CampusSelectorProps {
 export function CampusSelector({ onSelectCampus }: CampusSelectorProps) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+
       <div className="max-w-4xl w-full">
+
+         <div className='w-full flex items-center justify-center absolute top-10'>
+              <Image
+                src="/logo.png"
+                width={50}
+                height={300}
+                alt='logo'
+              />
+            <span className="ml-4 text-2xl uppercase font-bold text-foreground">federal university lokoja</span>
+            </div>
+
         {/* Header */}
         <div className="text-center mb-12">
+          
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center">
               <MapPin className="w-7 h-7 text-primary-foreground" />
             </div>
-            <span className="text-2xl uppercase font-bold text-foreground">fuldir</span>
+            <span className="text-2xl uppercase font-bold text-foreground">fuldirect</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
             Which Campus Are You On?
