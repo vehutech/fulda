@@ -121,7 +121,7 @@ export default function HomePage() {
       <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-center">
             <Image
               src="/logo.png"
               width={40}
